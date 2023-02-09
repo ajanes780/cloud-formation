@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create a Linux Nginx Server
+Parameters:
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  SiteName:
+    Type: String
+    Default: stackfails.io
+
+
+
+Resources:
+  LinuxNginxServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      AvailabilityZone: us-east-1a
+      InstanceType: t2.small
+      KeyName: wordpress
+      SecurityGroups:
+        - !Ref SSHSecurityGroup
+        - !Ref ServerSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+           sudo yum update -y
+           sudo amazon-linux-extras install nginx1 -y 
+           sudo nginx -v 
+           sudo service nginx start
+
+  SSHSecurityGroup:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+  ServerSecurityGroup:
+    # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: allow connections from specified CIDR ranges
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 192.168.1.1/32
+      # Assign the existing elastic IP to the instance
+  EIPAssociation:
+    Type: "AWS::EC2::EIPAssociation"
+    Properties:
+      InstanceId: !Ref LinuxNginxServer
+      EIP: 18.211.107.255
+
+Outputs:
+    InstanceId:
+        Description: The ID of the instance
+        Value: !Ref LinuxNginxServer
+    PublicIP:
+        Description: The public IP of the instance
+        Value: !GetAtt LinuxNginxServer.PublicIp
+    PublicDNS:
+        Description: The public DNS name of the instance
+        Value: !GetAtt LinuxNginxServer.PublicDnsName
+    SecurityGroup:
+        Description: The security group of the instance
+        Value: !Ref ServerSecurityGroup
+    SSHSecurityGroup:
+        Description: The security group of the instance
+        Value: !Ref SSHSecurityGroup
