@@ -18,6 +18,23 @@ Resources:
       ImageId: !Ref LatestAmiId
       AvailabilityZone: us-east-1a
       InstanceType: t2.small
+    Metadata:
+      AWS::Cloudformation::Init:
+        config:
+          packages:
+            yum:
+              ruby: []
+            files:
+              /home/ec2-user/install:
+                source: !Join ["", ["https://aws-codedeploy-", {"Ref" : "AWS::Region"}, ".s3.amazonaws.com/latest/install"]]
+                mode: 000755
+              commands:
+                00-install-agent:
+                  command: ./install auto
+                  cwd: /home/ec2-user/install
+                01-cfn-signal:
+                  command: !Join ["", ["/opt/aws/bin/cfn-signal -e 0 --stack ", { "Ref": "AWS::StackName" }, " --resource SampleLinuxInstance --region ", { "Ref" : "AWS::Region" }]]
+
       KeyName: wordpress
       SecurityGroups:
         - !Ref SSHSecurityGroup
