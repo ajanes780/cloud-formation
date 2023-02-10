@@ -34,22 +34,23 @@ Resources:
                         }
                       }
             "/etc/cfn/cfn-hup.conf":
-              content: !Sub |
-                  [main]
-                  stack=${AWS::StackId}
-                  region=${AWS::Region}
+              content:
+                !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
                 mode: "000400"
                 owner: "root"
                 group: "root"
-                "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
-                  content: !Sub |
-                    [cfn-auto-reloader-hook]
-                    triggers=post.update
-                    path=Resources.WebServerHost.Metadata.AWS::CloudFormation::Init
-                    action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServerHost --region ${AWS::Region}
-                  mode: "000400"
-                  owner: "root"
-                  group: "root"
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.WebServerHost.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServerHost --region ${AWS::Region}
+              mode: "000400"
+              owner: "root"
+              group: "root"
           commands:
             00-install-agent:
               command: ./install auto
