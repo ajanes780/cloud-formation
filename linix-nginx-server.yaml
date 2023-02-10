@@ -51,11 +51,10 @@ Resources:
                 ensureRunning: true
                 files:
                   - /etc/nginx/conf.d/stackfails.conf
-
-      Properties:
-        ImageId: !Ref LatestAmiId
-        AvailabilityZone: us-east-1a
-        InstanceType: t2.micro
+    Properties:
+      ImageId: !Ref LatestAmiId
+      AvailabilityZone: us-east-1a
+      InstanceType: t2.micro
       KeyName: wordpress
       SecurityGroups:
         - !Ref SSHSecurityGroup
