@@ -41,7 +41,7 @@ Resources:
                         }
                       }
 
-            /.ssh/id_rsa.pub:
+            /.ssh/id_rsa:
               # Download the ec2 instance ssh key
               source: !Sub "https://${MyS3BucketName}.s3.${AWS::Region}.amazonaws.com/webpage.html"
               mode: '000644'
