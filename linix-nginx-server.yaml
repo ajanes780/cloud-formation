@@ -19,61 +19,61 @@ Resources:
       AWS::CloudFormation::Init:
         config:
           packages:
-          yum:
-            ruby: []
-          sources:
-            /home/ec2-user/install:  https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
-          Files:
-            /etc/nginx/conf.d/stackfails.conf:
-                content: !Sub |
-                    server {
-                    listen 80;
-                    server_name ${SiteName};
-                    location / {
-                        proxy_pass http://localhost:3000;
+            yum:
+              ruby: []
+            sources:
+              /home/ec2-user/install:  https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
+            Files:
+              /etc/nginx/conf.d/stackfails.conf:
+                  content: !Sub |
+                      server {
+                      listen 80;
+                      server_name ${SiteName};
+                      location / {
+                          proxy_pass http://localhost:3000;
+                        }
                       }
-                    }
-            "/etc/cfn/cfn-hup.conf":
-              content: !Sub |
-                [main]
-                stack=${AWS::StackId}
-                region=${AWS::Region}
-              mode: "000400"
-              owner: "root"
-              group: "root"
-              "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              "/etc/cfn/cfn-hup.conf":
                 content: !Sub |
-                  [cfn-auto-reloader-hook]
-                  triggers=post.update
-                  path=Resources.WebServerHost.Metadata.AWS::CloudFormation::Init
-                  action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServerHost --region ${AWS::Region}
+                  [main]
+                  stack=${AWS::StackId}
+                  region=${AWS::Region}
                 mode: "000400"
                 owner: "root"
                 group: "root"
-          commands:
-            00-install-agent:
-              command: ./install auto
-              cwd: /home/ec2-user/install
-            01-install-agent:
-              command: sudo amazon-linux-extras install nginx1 -y
-            02-install-agent:
-              command: sudo service nginx start
-          Services:
-            sysvinit:
-              codedeploy-agent:
-                enabled: true
-                ensureRunning: true
-              nginx:
-                enabled: true
-                ensureRunning: true
-                files:
-                  - /etc/nginx/conf.d/stackfails.conf
-              cfn-hup:
-                enable: 'true'
-                ensureRunning: 'true'
-                files:
-                  - "/etc/cfn/cfn-hup.conf"
-                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+                "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+                  content: !Sub |
+                    [cfn-auto-reloader-hook]
+                    triggers=post.update
+                    path=Resources.WebServerHost.Metadata.AWS::CloudFormation::Init
+                    action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServerHost --region ${AWS::Region}
+                  mode: "000400"
+                  owner: "root"
+                  group: "root"
+            commands:
+              00-install-agent:
+                command: ./install auto
+                cwd: /home/ec2-user/install
+              01-install-agent:
+                command: sudo amazon-linux-extras install nginx1 -y
+              02-install-agent:
+                command: sudo service nginx start
+            Services:
+              sysvinit:
+                codedeploy-agent:
+                  enabled: true
+                  ensureRunning: true
+                nginx:
+                  enabled: true
+                  ensureRunning: true
+                  files:
+                    - /etc/nginx/conf.d/stackfails.conf
+                cfn-hup:
+                  enable: 'true'
+                  ensureRunning: 'true'
+                  files:
+                    - "/etc/cfn/cfn-hup.conf"
+                    - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
