@@ -12,7 +12,7 @@ Parameters:
     Description: Url of the site
 
 Resources:
-  webserver:
+  Webserver:
     Type: AWS::EC2::Instance
     Metadata:
       Comment: Basic Nginx Server Setup
@@ -67,10 +67,10 @@ Resources:
             yum install -y aws-cfn-bootstrap
           
             # Start cfn-init
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource webserver --region ${AWS::Region}
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Webserver --region ${AWS::Region}
           
             # cfn-init completed so signal success or not
-            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource webserver --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Webserver --region ${AWS::Region}
 
   SSHSecurityGroup:
     # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
@@ -101,19 +101,19 @@ Resources:
   EIPAssociation:
     Type: "AWS::EC2::EIPAssociation"
     Properties:
-      InstanceId: !Ref webserver
+      InstanceId: !Ref Webserver
       EIP: 18.211.107.255
 
 Outputs:
   InstanceId:
     Description: The ID of the instance
-    Value: !Ref webserver
+    Value: !Ref Webserver
   PublicIP:
     Description: The public IP of the instance
-    Value: !GetAtt webserver.PublicIp
+    Value: !GetAtt Webserver.PublicIp
   PublicDNS:
     Description: The public DNS name of the instance
-    Value: !GetAtt webserver.PublicDnsName
+    Value: !GetAtt Webserver.PublicDnsName
   SecurityGroup:
     Description: The security group of the instance
     Value: !Ref ServerSecurityGroup
