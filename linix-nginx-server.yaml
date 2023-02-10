@@ -40,6 +40,18 @@ Resources:
               command: sudo amazon-linux-extras install nginx1 -y
             02-install-agent:
               command: sudo service nginx start
+          Services:
+            sysvinit:
+              codedeploy-agent:
+                enabled: true
+                ensureRunning: true
+
+              nginx:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/nginx/conf.d/stackfails.conf
+
       Properties:
         ImageId: !Ref LatestAmiId
         AvailabilityZone: us-east-1a
