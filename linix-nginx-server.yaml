@@ -21,10 +21,8 @@ Resources:
           packages:
             yum:
               ruby: []
+              wget: []
           Files:
-            /home/ec2-user/install:
-              source: https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
-              mode: 000755
             /etc/nginx/conf.d/stackfails.conf:
               content: !Sub |
                       server {
@@ -54,12 +52,16 @@ Resources:
               group: "root"
           commands:
             01-install-agent:
-              command: ./install auto
-              cwd: /home/ec2-user/install
+               command: !Sub |
+                wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
+                chmod +x ./install
+                ./install auto
+                cwd: /home/ec2-user/install
             02-install-agent:
               command: sudo amazon-linux-extras install nginx1 -y
             03-install-agent:
               command: sudo service nginx start
+
           Services:
             sysvinit:
               codedeploy-agent:
