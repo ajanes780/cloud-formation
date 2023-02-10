@@ -29,11 +29,9 @@ Resources:
                     server_name ${{SiteName}};
                     location / {
                         proxy_pass http://localhost:3000;
+                     }
                     }
-                    }
-                mode: "000644"
-                owner: root
-                group: root
+
           commands:
             00-install-agent:
               command: ./install auto
