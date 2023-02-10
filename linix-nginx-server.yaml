@@ -21,11 +21,11 @@ Resources:
           packages:
             yum:
               ruby: []
-            sources:
-              /home/ec2-user/install:  https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
-            Files:
-              /etc/nginx/conf.d/stackfails.conf:
-                  content: !Sub |
+          sources:
+            /home/ec2-user/install:  https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
+          Files:
+            /etc/nginx/conf.d/stackfails.conf:
+              content: !Sub |
                       server {
                       listen 80;
                       server_name ${SiteName};
@@ -33,8 +33,8 @@ Resources:
                           proxy_pass http://localhost:3000;
                         }
                       }
-              "/etc/cfn/cfn-hup.conf":
-                content: !Sub |
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
                   [main]
                   stack=${AWS::StackId}
                   region=${AWS::Region}
@@ -50,30 +50,30 @@ Resources:
                   mode: "000400"
                   owner: "root"
                   group: "root"
-            commands:
-              00-install-agent:
-                command: ./install auto
-                cwd: /home/ec2-user/install
-              01-install-agent:
-                command: sudo amazon-linux-extras install nginx1 -y
-              02-install-agent:
-                command: sudo service nginx start
-            Services:
-              sysvinit:
-                codedeploy-agent:
-                  enabled: true
-                  ensureRunning: true
-                nginx:
-                  enabled: true
-                  ensureRunning: true
-                  files:
-                    - /etc/nginx/conf.d/stackfails.conf
-                cfn-hup:
-                  enable: 'true'
-                  ensureRunning: 'true'
-                  files:
-                    - "/etc/cfn/cfn-hup.conf"
-                    - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+          commands:
+            00-install-agent:
+              command: ./install auto
+              cwd: /home/ec2-user/install
+            01-install-agent:
+              command: sudo amazon-linux-extras install nginx1 -y
+            02-install-agent:
+              command: sudo service nginx start
+          Services:
+            sysvinit:
+              codedeploy-agent:
+                enabled: true
+                ensureRunning: true
+              nginx:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/nginx/conf.d/stackfails.conf
+              cfn-hup:
+                enable: 'true'
+                ensureRunning: 'true'
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
