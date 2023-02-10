@@ -31,6 +31,7 @@ Resources:
               git: []
           Files:
             # Configure the reverse proxy for the site domain
+            # ideally this will come from the S3 bucket but it is here to highlight the base config
             /etc/nginx/conf.d/stackfails.conf:
               content: !Sub |
                       server {
@@ -67,25 +68,38 @@ Resources:
 
           commands:
             #Install code deploy agent so instance can be used by cd pipeline
-            01-install-agent:
+            01-install-cd:
                command: !Sub |
                 wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
                 chmod +x ./install
                 ./install auto
              # Install  nginx
-            02-install-agent:
+            02-install-ngnix:
               command: sudo amazon-linux-extras install nginx1 -y
-            03-install-agent:
+            03-run-nginx:
               command: sudo service nginx start
               # Install NVM to manage node versions
-            04-install-agent:
+            04-install-nvm-node:
               command: !Sub |
                 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
                 source ~/.bash_profile
                 nvm install node 16
               # Install PM2 to manage multiple node processes
-            05-install-agent:
+            05-install-process-agent:
                 command: npm install pm2 -g
+
+            06-pull-git-repo:
+              command:
+              cmd:
+
+            07-install-start-app:
+              command: !Sub |
+                npm install 
+                npm build 
+                npm run start
+            08-start-process-manager:
+              command:
+
           Services:
             sysvinit:
               codedeploy-agent:
