@@ -17,7 +17,8 @@ Resources:
     Metadata:
       Comment: Basic Nginx Server Setup
       AWS::CloudFormation::Init:
-        packages:
+        config:
+          packages:
           yum:
             ruby: []
           sources:
@@ -32,7 +33,23 @@ Resources:
                         proxy_pass http://localhost:3000;
                       }
                     }
-
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+              mode: "000400"
+              owner: "root"
+              group: "root"
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+                content: !Sub |
+                  [cfn-auto-reloader-hook]
+                  triggers=post.update
+                  path=Resources.WebServerHost.Metadata.AWS::CloudFormation::Init
+                  action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServerHost --region ${AWS::Region}
+                mode: "000400"
+                owner: "root"
+                group: "root"
           commands:
             00-install-agent:
               command: ./install auto
@@ -46,15 +63,21 @@ Resources:
               codedeploy-agent:
                 enabled: true
                 ensureRunning: true
-
               nginx:
                 enabled: true
                 ensureRunning: true
                 files:
                   - /etc/nginx/conf.d/stackfails.conf
+              cfn-hup:
+                enable: 'true'
+                ensureRunning: 'true'
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
+        Count: 1
     Properties:
       ImageId: !Ref LatestAmiId
       AvailabilityZone: us-east-1a
@@ -64,8 +87,9 @@ Resources:
         - !Ref SSHSecurityGroup
         - !Ref ServerSecurityGroup
       UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
+        Fn::Base64:
+          !Sub |
+          #!/bin/bash -xe
             # Get the latest CloudFormation helper scripts
             yum install -y aws-cfn-bootstrap
           
