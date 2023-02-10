@@ -52,6 +52,9 @@ Resources:
                 ensureRunning: true
                 files:
                   - /etc/nginx/conf.d/stackfails.conf
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
     Properties:
       ImageId: !Ref LatestAmiId
       AvailabilityZone: us-east-1a
