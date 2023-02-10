@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description:
   Create a Linux Nginx Server
+  This templates creates a instance for use with code deploy and code pipeline
 Parameters:
   LatestAmiId:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
@@ -8,8 +9,7 @@ Parameters:
   SiteName:
     Type: String
     Default: stackfails.io
-
-
+    Description: Url of the site
 
 Resources:
   LinuxNginxServer:
@@ -20,23 +20,22 @@ Resources:
       InstanceType: t2.small
     Metadata:
       AWS::Cloudformation::Init:
-        config:
-          packages:
-            yum:
-              ruby: []
-            files:
-              /home/ec2-user/install:
-                source: !Join ["", ["https://aws-codedeploy-", {"Ref" : "AWS::Region"}, ".s3.amazonaws.com/latest/install"]]
-                mode: 000755
-              commands:
-                00-install-agent:
-                  command: ./install auto
-                  cwd: /home/ec2-user/install
-                01-cfn-signal:
-                  command: !Join ["", ["/opt/aws/bin/cfn-signal -e 0 --stack ", { "Ref": "AWS::StackName" }, " --resource SampleLinuxInstance --region ", { "Ref" : "AWS::Region" }]]
-      Tags:
-        - Key: Name
-          Value: !Ref SiteName
+        packages:
+          yum:
+            ruby: [ ]
+          files:
+            /home/ec2-user/install:
+              source: https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
+              mode: 000755
+            commands:
+              00-install-agent:
+                command: ./install auto
+                cwd: /home/ec2-user/install
+              01-install-agent:
+                command: sudo yum install nginx -y
+              02-install-agent:
+                command: sudo service nginx start
+
       KeyName: wordpress
       SecurityGroups:
         - !Ref SSHSecurityGroup
@@ -44,10 +43,14 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-           sudo yum update -y
-           sudo amazon-linux-extras install nginx1 -y 
-           sudo nginx -v 
-           sudo service nginx start
+            # Get the latest CloudFormation helper scripts
+            yum install -y aws-cfn-bootstrap
+            
+            # Start cfn-init
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LinuxNginxServer --region ${AWS::Region}
+            
+            # cfn-init completed so signal success or not
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource LinuxNginxServer --region ${AWS::Region}
 
   SSHSecurityGroup:
     # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
@@ -82,18 +85,18 @@ Resources:
       EIP: 18.211.107.255
 
 Outputs:
-    InstanceId:
-        Description: The ID of the instance
-        Value: !Ref LinuxNginxServer
-    PublicIP:
-        Description: The public IP of the instance
-        Value: !GetAtt LinuxNginxServer.PublicIp
-    PublicDNS:
-        Description: The public DNS name of the instance
-        Value: !GetAtt LinuxNginxServer.PublicDnsName
-    SecurityGroup:
-        Description: The security group of the instance
-        Value: !Ref ServerSecurityGroup
-    SSHSecurityGroup:
-        Description: The security group of the instance
-        Value: !Ref SSHSecurityGroup
+  InstanceId:
+    Description: The ID of the instance
+    Value: !Ref LinuxNginxServer
+  PublicIP:
+    Description: The public IP of the instance
+    Value: !GetAtt LinuxNginxServer.PublicIp
+  PublicDNS:
+    Description: The public DNS name of the instance
+    Value: !GetAtt LinuxNginxServer.PublicDnsName
+  SecurityGroup:
+    Description: The security group of the instance
+    Value: !Ref ServerSecurityGroup
+  SSHSecurityGroup:
+    Description: The security group of the instance
+    Value: !Ref SSHSecurityGroup
