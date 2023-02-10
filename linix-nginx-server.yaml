@@ -4,6 +4,7 @@ Description:
   This templates creates a instance for use with code deploy and code pipeline
   ec2 server is configured with node 16 and git.
 Parameters:
+#  Will retrieve the latest linux AMI
   LatestAmiId:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
@@ -11,6 +12,10 @@ Parameters:
     Type: String
     Default: stackfails.io
     Description: Url of the site
+  MyS3BucketName:
+    Description: Name of an existing bucket to download files from
+    Type: String
+    Default: TBD
 
 Resources:
   Webserver:
@@ -35,6 +40,12 @@ Resources:
                           proxy_pass http://localhost:3000;
                         }
                       }
+
+            /.ssh/id_rsa.pub:
+              # Download the ec2 instance ssh key
+              source: !Sub "https://${MyS3BucketName}.s3.${AWS::Region}.amazonaws.com/webpage.html"
+              mode: '000644'
+              authentication: S3AccessCreds
             "/etc/cfn/cfn-hup.conf":
               content:
                 !Sub |
@@ -53,6 +64,7 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
+
           commands:
             #Install code deploy agent so instance can be used by cd pipeline
             01-install-agent:
@@ -90,6 +102,14 @@ Resources:
                 files:
                   - "/etc/cfn/cfn-hup.conf"
                   - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+
+      # Define S3 access credentials
+      AWS::CloudFormation::Authentication:
+        S3AccessCreds:
+          type: S3
+          buckets:
+            - !Sub ${MyS3BucketName}
+          roleName: !Ref InstanceRole
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
@@ -116,6 +136,35 @@ Resources:
             # cfn-init completed so signal success or not
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Webserver --region ${AWS::Region}
 
+ #Authentication
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Principal:
+              Service: ec2.amazonaws.com
+            Effect: Allow
+            Sid: ''
+      Policies:
+        - PolicyName: AuthenticatedS3GetObjects
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:GetObject'
+                Resource: !Sub 'arn:aws:s3:::${MyS3BucketName}/*'
+                Effect: Allow
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref InstanceRole
+
+  # Security and Networking
   SSHSecurityGroup:
     # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
     Type: AWS::EC2::SecurityGroup
@@ -141,7 +190,8 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: 192.168.1.1/32
-      # Assign the existing elastic IP to the instance
+
+  # Assign the existing elastic IP to the instance
   EIPAssociation:
     Type: "AWS::EC2::EIPAssociation"
     Properties:
