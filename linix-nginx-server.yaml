@@ -14,28 +14,38 @@ Parameters:
 Resources:
   LinuxNginxServer:
     Type: AWS::EC2::Instance
-    Properties:
-      ImageId: !Ref LatestAmiId
-      AvailabilityZone: us-east-1a
-      InstanceType: t2.small
     Metadata:
       AWS::Cloudformation::Init:
         packages:
           yum:
-            ruby: [ ]
-          files:
-            /home/ec2-user/install:
-              source: https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
-              mode: 000755
-            commands:
-              00-install-agent:
-                command: ./install auto
-                cwd: /home/ec2-user/install
-              01-install-agent:
-                command: sudo yum install nginx -y
-              02-install-agent:
-                command: sudo service nginx start
-
+            ruby: []
+          sources:
+            /home/ec2-user/install:  https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
+          Files:
+            /etc/nginx/conf.d/stackfails.conf:
+                content: !Sub |
+                    server {
+                    listen 80;
+                    server_name ${{SiteName}};
+                    location / {
+                        proxy_pass http://localhost:3000;
+                    }
+                    }
+                mode: "000644"
+                owner: root
+                group: root
+          commands:
+            00-install-agent:
+              command: ./install auto
+              cwd: /home/ec2-user/install
+            01-install-agent:
+              command: sudo amazon-linux-extras install nginx1 -y
+            02-install-agent:
+              command: sudo service nginx start
+      Properties:
+        ImageId: !Ref LatestAmiId
+        AvailabilityZone: us-east-1a
+        InstanceType: t2.micro
       KeyName: wordpress
       SecurityGroups:
         - !Ref SSHSecurityGroup
@@ -45,10 +55,10 @@ Resources:
           #!/bin/bash
             # Get the latest CloudFormation helper scripts
             yum install -y aws-cfn-bootstrap
-            
+          
             # Start cfn-init
             /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LinuxNginxServer --region ${AWS::Region}
-            
+          
             # cfn-init completed so signal success or not
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource LinuxNginxServer --region ${AWS::Region}
 
