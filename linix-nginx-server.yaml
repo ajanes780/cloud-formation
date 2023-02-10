@@ -22,6 +22,9 @@ Resources:
             yum:
               ruby: []
           Files:
+            /home/ec2-user/install:
+              source: https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
+              mode: 000755
             /etc/nginx/conf.d/stackfails.conf:
               content: !Sub |
                       server {
@@ -50,9 +53,6 @@ Resources:
               owner: "root"
               group: "root"
           commands:
-            00-install-agent:
-              command: wget https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install
-              cwd: /home/ec2-user/install
             01-install-agent:
               command: ./install auto
               cwd: /home/ec2-user/install
