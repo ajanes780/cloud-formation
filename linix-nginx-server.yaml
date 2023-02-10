@@ -15,7 +15,7 @@ Resources:
   LinuxNginxServer:
     Type: AWS::EC2::Instance
     Metadata:
-      AWS::Cloudformation::Init:
+      AWS::CloudFormation::Init:
         packages:
           yum:
             ruby: []
