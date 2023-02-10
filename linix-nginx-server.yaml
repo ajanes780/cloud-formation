@@ -56,7 +56,7 @@ Resources:
                 wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
                 chmod +x ./install
                 ./install auto
-                cwd: /home/ec2-user/install
+
             02-install-agent:
               command: sudo amazon-linux-extras install nginx1 -y
             03-install-agent:
