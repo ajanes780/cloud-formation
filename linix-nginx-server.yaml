@@ -29,7 +29,7 @@ Resources:
                     server_name ${{SiteName}};
                     location / {
                         proxy_pass http://localhost:3000;
-                     }
+                      }
                     }
 
           commands:
