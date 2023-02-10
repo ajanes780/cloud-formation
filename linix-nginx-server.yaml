@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description:
-  Create a Linux Nginx Server
+  Create a Linux Nginx Server,
   This templates creates a instance for use with code deploy and code pipeline
+  ec2 server is configured with node 16 and git.
 Parameters:
   LatestAmiId:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
@@ -22,7 +23,9 @@ Resources:
             yum:
               ruby: []
               wget: []
+              git: []
           Files:
+            # Configure the reverse proxy for the site domain
             /etc/nginx/conf.d/stackfails.conf:
               content: !Sub |
                       server {
@@ -51,17 +54,26 @@ Resources:
               owner: "root"
               group: "root"
           commands:
+            #Install code deploy agent so instance can be used by cd pipeline
             01-install-agent:
                command: !Sub |
                 wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
                 chmod +x ./install
                 ./install auto
-
+             # Install  nginx
             02-install-agent:
               command: sudo amazon-linux-extras install nginx1 -y
             03-install-agent:
               command: sudo service nginx start
-
+              # Install NVM to manage node versions
+            04-install-agent:
+              command: !Sub |
+                curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
+                source ~/.bash_profile
+                nvm install node 16
+              # Install PM2 to manage multiple node processes
+            05-install-agent:
+                command: npm install pm2 -g
           Services:
             sysvinit:
               codedeploy-agent:
@@ -83,6 +95,7 @@ Resources:
         Timeout: PT15M
         Count: 1
     Properties:
+      # Always use the latest Linux AMI
       ImageId: !Ref LatestAmiId
       AvailabilityZone: us-east-1a
       InstanceType: t2.micro
