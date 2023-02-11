@@ -10,12 +10,13 @@ Parameters:
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
   SiteName:
     Type: String
-    Default: stackfails.io
+    Default: linux.stackfails.io
     Description: Url of the site
   MyS3BucketName:
-    Description: Name of an existing bucket to download files from
+    Description: Name of an existing bucket to download template
     Type: String
-    Default: TBD
+    Default: ignite-ci-cd-pipeline
+
 
 Resources:
   Webserver:
@@ -29,9 +30,9 @@ Resources:
               ruby: []
               wget: []
               git: []
-          Files:
+          files:
             # Configure the reverse proxy for the site domain
-            # ideally this will come from the S3 bucket but it is here to highlight the base config
+            # ideally this will come from the S3 bucket, but it is here to highlight the base config
             /etc/nginx/conf.d/stackfails.conf:
               content: !Sub |
                       server {
@@ -42,11 +43,6 @@ Resources:
                         }
                       }
 
-            /.ssh/id_rsa:
-              # Download the ec2 instance ssh key
-              source: !Sub "https://${MyS3BucketName}.s3.${AWS::Region}.amazonaws.com/webpage.html"
-              mode: '000644'
-              authentication: S3AccessCreds
             "/etc/cfn/cfn-hup.conf":
               content:
                 !Sub |
@@ -67,39 +63,48 @@ Resources:
               group: "root"
 
           commands:
+            00-create-ssh-key:
+              command: !Sub |
+                touch ~/.ssh/id_rsa
+                echo "{{resolve:ssm:ssh-key}}" >> ~/.ssh/id_rsa
+                chmod 700 ~/.ssh/
+                chmod 600 ~/.ssh/id_rsa
             #Install code deploy agent so instance can be used by cd pipeline
             01-install-cd:
-               command: !Sub |
+              command: !Sub |
                 wget https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install
                 chmod +x ./install
                 ./install auto
-             # Install  nginx
             02-install-ngnix:
               command: sudo amazon-linux-extras install nginx1 -y
             03-run-nginx:
               command: sudo service nginx start
-              # Install NVM to manage node versions
-            04-install-nvm-node:
+               # Install node 16
+            04-install-node:
               command: !Sub |
-                curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
-                source ~/.bash_profile
-                nvm install node 16
-              # Install PM2 to manage multiple node processes
-            05-install-process-agent:
-                command: npm install pm2 -g
-
-            06-pull-git-repo:
-              command:
-              cmd:
-
+                curl --silent --location https://rpm.nodesource.com/setup_16.x | bash -
+                yum -y install nodejs
+            05-clone-app:
+              command: |
+                mkdir /var/webapp
+                cd  /var/webapp
+                ssh -o "StrictHostKeyChecking=no" git@github.com
+                git clone git@github.com:ajanes780/aaron-blog-nextjs-sanity.git
+            06-add-app-env:
+              command: !Sub |
+                cd /var/webapp/aaron-blog-nextjs-sanity
+                touch .env
+                echo "{{resolve:ssm:stack-fail-env}}" >> /var/webapp/aaron-blog-nextjs-sanity/.env
             07-install-start-app:
-              command: !Sub |
+              command: |
+                cd /var/webapp/aaron-blog-nextjs-sanity
                 npm install 
-                npm build 
-                npm run start
-            08-start-process-manager:
-              command:
-
+                npm run build
+            08-install-start-process-manager:
+              command: !Sub |
+                cd /var/webapp/aaron-blog-nextjs-sanity
+                npm install -g pm2
+                pm2 start npm --name "aaron-blog-nextjs-sanity" -- start
           Services:
             sysvinit:
               codedeploy-agent:
@@ -132,7 +137,7 @@ Resources:
       # Always use the latest Linux AMI
       ImageId: !Ref LatestAmiId
       AvailabilityZone: us-east-1a
-      InstanceType: t2.micro
+      InstanceType: t2.small
       KeyName: wordpress
       SecurityGroups:
         - !Ref SSHSecurityGroup
@@ -149,8 +154,6 @@ Resources:
           
             # cfn-init completed so signal success or not
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Webserver --region ${AWS::Region}
-
- #Authentication
   InstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -170,15 +173,12 @@ Resources:
                   - 's3:GetObject'
                 Resource: !Sub 'arn:aws:s3:::${MyS3BucketName}/*'
                 Effect: Allow
-
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: /
       Roles:
         - !Ref InstanceRole
-
-  # Security and Networking
   SSHSecurityGroup:
     # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
     Type: AWS::EC2::SecurityGroup
@@ -189,7 +189,6 @@ Resources:
           FromPort: 22
           IpProtocol: tcp
           ToPort: 22
-
   ServerSecurityGroup:
     # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
     Type: AWS::EC2::SecurityGroup
@@ -204,13 +203,12 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: 192.168.1.1/32
-
-  # Assign the existing elastic IP to the instance
   EIPAssociation:
     Type: "AWS::EC2::EIPAssociation"
     Properties:
+      AllocationId: "eipalloc-09759c409bcf5611c"
       InstanceId: !Ref Webserver
-      EIP: 18.211.107.255
+
 
 Outputs:
   InstanceId:
