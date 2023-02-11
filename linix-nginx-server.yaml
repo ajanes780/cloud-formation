@@ -104,11 +104,15 @@ Resources:
                 cd /var/webapp/aaron-blog-nextjs-sanity
                 npm install 
                 npm run build
+              # Set up a process manager https://pm2.keymetrics.io/docs/usage/quick-start/
             08-install-start-process-manager:
               command: !Sub |
                 cd /var/webapp/aaron-blog-nextjs-sanity
                 npm install -g pm2
                 pm2 start npm --name "aaron-blog-nextjs-sanity" -- start
+                pm2 startup
+                pm2 save
+
           Services:
             sysvinit:
               codedeploy-agent:
