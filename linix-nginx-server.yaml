@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description:
   Create a Linux Nginx Server,
-  This templates creates a instance for use with code deploy and code pipeline
+  This templates creates a instance with code deploy agent for use with a code deploy pipeline
   ec2 server is configured with node 16 and git.
 Parameters:
-#  Will retrieve the latest linux AMI
+  #  Will retrieve the latest linux AMI
   LatestAmiId:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
@@ -27,21 +27,25 @@ Resources:
         config:
           packages:
             yum:
-              ruby: []
-              wget: []
-              git: []
+              ruby: [ ]
+              wget: [ ]
+              git: [ ]
           files:
             # Configure the reverse proxy for the site domain
             # ideally this will come from the S3 bucket, but it is here to highlight the base config
             /etc/nginx/conf.d/stackfails.conf:
               content: !Sub |
-                      server {
-                      listen 80;
-                      server_name ${SiteName};
-                      location / {
-                          proxy_pass http://localhost:3000;
-                        }
-                      }
+                server {
+                  client_max_body_size 64M;
+                  listen 80;
+                  server_name  !{SiteName};
+                     location / {
+                        proxy_pass             http://127.0.0.1:3000;
+                        proxy_read_timeout     60;
+                        proxy_connect_timeout  60;
+                        proxy_redirect         off;
+                       }
+                    }
 
             "/etc/cfn/cfn-hup.conf":
               content:
@@ -79,7 +83,7 @@ Resources:
               command: sudo amazon-linux-extras install nginx1 -y
             03-run-nginx:
               command: sudo service nginx start
-               # Install node 16
+              # Install node 16
             04-install-node:
               command: !Sub |
                 curl --silent --location https://rpm.nodesource.com/setup_16.x | bash -
@@ -185,10 +189,10 @@ Resources:
     Properties:
       GroupDescription: Enable SSH access via port 22
       SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
           FromPort: 22
-          IpProtocol: tcp
           ToPort: 22
+          CidrIp: 0.0.0.0/0
   ServerSecurityGroup:
     # http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
     Type: AWS::EC2::SecurityGroup
@@ -200,9 +204,11 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 192.168.1.1/32
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+
   EIPAssociation:
     Type: "AWS::EC2::EIPAssociation"
     Properties:
