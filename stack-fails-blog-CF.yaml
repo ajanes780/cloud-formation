@@ -22,22 +22,22 @@ Parameters:
   ElasticIPAddress:
     Description: The allocation Id of the EIP you created
     Type: String
-    Default: "Your EIP"
+    Default: "eipalloc-09759c409bcf5611c"
     MinLength: 1
   GitCloneLink:
     Description: Provide the clone link for your version controlled repo
     Type: String
-    Default: "git@github.com:username/your-repo-folder.git"
+    Default: "git@github.com:ajanes780/aaron-blog-nextjs-sanity.git"
     MinLength: 1
   RepoFolderName:
     Description: The name of the folder your app clones into
     Type: String
-    Default: "your-repo-folder"
+    Default: "aaron-blog-nextjs-sanity"
     MinLength: 1
   KeyName:
     Description: The name of your ssh key pem file to ssh to your instance
     Type: String
-    Default: "Your ssh.pem file"
+    Default: "wordpress"
     MinLength: 1
 Resources:
   Webserver:
